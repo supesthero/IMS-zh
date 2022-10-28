@@ -1,0 +1,108 @@
+﻿@page "/purchase"
+
+@inject IViewInventoriesByNameUseCase ViewInventoriesByNameUseCase
+@inject IViewInventoryByIdUseCase ViewInventoryByIdUseCase
+@inject IPurchaseInventoryUseCase PurchaseInventoryUseCase
+@inject IJSRuntime JSRuntime
+
+@*@attribute [Authorize(Policy = "Purchasers")]*@
+
+<h3>采购物料</h3>
+<br />
+<EditForm id="purchase-form" Model="purchaseViewModel" OnValidSubmit="Purchase" >
+    <DataAnnotationsValidator></DataAnnotationsValidator>
+    <ValidationSummary></ValidationSummary>
+
+    <div class="form-group">
+        <label for="po">采购订单号</label>
+        <InputText id="po" @bind-Value="purchaseViewModel.PONumber" class="form-control"></InputText>
+    </div>
+    <br />
+    <div class="card">
+        <div class="card-body">
+            <div class="form-group">
+                <input type="hidden" value="@purchaseViewModel.InventoryId" />
+                <AutoCompleteComponent Label="物料=>采购"
+                                       OnItemSelected="OnItemSelected"
+                                       SearchFunction="SearchInventory">
+                </AutoCompleteComponent>
+                @if (purchaseViewModel.InventoryId > 0 && purchaseViewModel.InventoryPrice >= 0)
+                {
+                    <text>Price:</text>
+                    @purchaseViewModel.InventoryPrice.ToString("c")
+                    ;
+                }
+            </div>
+        </div>
+    </div>
+    <br />
+    <div class="form-group">
+        <label for="qty">数量</label>
+        <InputNumber id="qty" @bind-Value="purchaseViewModel.QuantityToPurchase" class="form-control"></InputNumber>
+    </div>
+
+    <br />
+    <button type="submit" class="btn btn-primary">采购</button>
+</EditForm>
+@code {
+    private AuthenticationState authenticationState;
+
+    [CascadingParameter]
+    private Task<AuthenticationState>? authenticationStateTask { get; set; }
+
+    private PurchaseViewModel purchaseViewModel = new PurchaseViewModel();
+
+    private Inventory? selectedInventory = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (authenticationStateTask != null)
+        {
+            authenticationState = await authenticationStateTask;
+        }
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        base.OnAfterRender(firstRender);
+
+        if(firstRender)
+        {
+            JSRuntime.InvokeVoidAsync("PreventFormSubmition", "purchase-form");
+        }
+
+    }
+
+    private async Task Purchase()
+    {
+        if (this.selectedInventory != null &&
+            authenticationState != null &&
+            !string.IsNullOrWhiteSpace(authenticationState.User?.Identity?.Name))
+        {
+            await PurchaseInventoryUseCase.ExecuteAsync(
+                this.purchaseViewModel.PONumber,
+                this.selectedInventory,
+                this.purchaseViewModel.QuantityToPurchase,
+                authenticationState.User.Identity.Name
+            );
+
+            this.purchaseViewModel = new PurchaseViewModel();
+            this.selectedInventory = null;
+        }
+    }
+
+    private async Task<List<ItemViewModel>>? SearchInventory(string name)
+    {
+        var list = await ViewInventoriesByNameUseCase.ExecuteAsync(name);
+        if (list == null) return null;
+        return list.Select(x => new ItemViewModel { Id = x.InventoryId, Name = x.InventoryName })?.ToList();
+    }
+
+    private async Task OnItemSelected(ItemViewModel item)
+    {
+        this.selectedInventory = await ViewInventoryByIdUseCase.ExecuteAsync(item.Id);
+        purchaseViewModel.InventoryId = item.Id;
+        purchaseViewModel.InventoryPrice = this.selectedInventory.Price;
+        
+    }
+}

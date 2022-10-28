@@ -1,0 +1,23 @@
+﻿@inject NavigationManager NavigationManager
+@if (Products != null && Products.Count > 0)
+{
+    @foreach (var product in Products)
+    {
+        <tr>
+            <td>@product.ProductName</td>
+            <td>@product.Quantity</td>
+            <td>@product.Price.ToString("c")</td>
+            <td><button type="button" class="btn btn-light" @onclick="@(() => UpdateProduct(product))">编辑</button></td>
+        </tr>
+    }
+}
+@code {
+
+    [Parameter]
+    public List<Product> Products { get; set; } = new List<Product>();
+
+    private void UpdateProduct(Product product)
+    {
+        NavigationManager.NavigateTo($"/updateproduct/{product.ProductId}");
+    }
+}

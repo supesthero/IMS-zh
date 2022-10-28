@@ -1,0 +1,103 @@
+﻿@page "/inventoryreport"
+@inject ISearchInventoryTransactionsUseCase SearchInventoryTransactionsUseCase
+@inject IJSRuntime JSRuntime
+
+<h3>物料交易</h3>
+<br />
+
+<div id="printarea">
+    <div class="row">
+        <div class="col">
+            <label for"inv">物料名称</label>
+            <input type="text" id="inv" class="form-control" @bind-value="invName" />
+        </div>
+        <div class="col">
+            <label for"df">开始日期</label>
+            <input type="date" id="df" class="form-control" @bind-value="dateFrom" />
+        </div>
+        <div class="col">
+            <label for"dt">结束日期</label>
+            <input type="date" id="dt" class="form-control" @bind-value="dateTo" />
+        </div>
+        <div class="col">
+            <label for"at">作业类型</label>
+            <select id="at" class="form-control" @bind="activityTypeId">
+                <option value="0"></option>
+                <option value="1">采购物料</option>
+                <option value="2">生产产品</option>
+            </select>
+        </div>
+        <div class="col">
+            <label>&nbsp;</label>
+            <button type="button" class="btn btn-primary form-control" @onclick="SearchInventories">查询</button>
+        </div>
+        <div class="col">
+            <label>&nbsp;</label>
+            <button type="button" class="btn btn-primary form-control" @onclick="PrintReport">打印</button>
+        </div>
+    </div>
+    @if (inventoryTransactions != null)
+    {
+        <table class="table">
+            <thead>
+                <tr>
+                    <td>日期</td>
+                    <td>物料</td>
+                    <td>作业类型</td>
+                    <td>之前数量</td>
+                    <td>之后数量</td>
+                    <th>单价</th>
+                    <td>采购订单号</td>
+                    <td>生产订单号</td>
+                    <td>作业人</td>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var it in inventoryTransactions)
+                {
+                    <tr>
+                        <td>@it.TransactionDate.ToString("MM/dd/yyyy")</td>
+                        <td>@it.Inventory.InventoryName</td>
+                        <td>
+                            @if (it.ActivityType == InventoryTransactionType.PurchaseInventory)
+                            {
+                                <text>Purchase</text>
+                            }
+                            else if (it.ActivityType == InventoryTransactionType.ProduceProduct)
+                            {
+                                <text>Produce</text>
+                            }
+                        </td>
+                        <td>@it.QuantityBefore</td>
+                        <td>@it.QuantityAfter</td>
+                        <td>@it.UnitPrice.ToString("c")</td>
+                        <td>@it.PONumber</td>
+                        <td>@it.ProductionNumber</td>
+                        <td>@it.DoneBy</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+@code {
+    private string invName = string.Empty;
+    private DateTime? dateFrom;
+    private DateTime? dateTo;
+    private int activityTypeId = 0;
+    private IEnumerable<InventoryTransaction>? inventoryTransactions;
+
+    private async Task SearchInventories()
+    {
+        InventoryTransactionType? invType = null;
+        if (activityTypeId != 0) invType = (InventoryTransactionType)activityTypeId;
+
+        inventoryTransactions = await SearchInventoryTransactionsUseCase.ExecuteAsync(invName, dateFrom, dateTo, invType);
+
+    }
+    private void PrintReport()
+    {
+        JSRuntime.InvokeVoidAsync("print");
+    }
+}

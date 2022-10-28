@@ -1,0 +1,25 @@
+﻿@page "/products"
+@inject NavigationManager NavigationManager
+@*@attribute [Authorize(Policy = "Inventory")]*@
+<h3>产品列表</h3>
+<br />
+
+<SearchProductComponent OnSearchProduct="OnProductSearch"></SearchProductComponent>
+<br />
+<ProductListComponent SearchTerm="@searchTerm"></ProductListComponent>
+<br />
+<button type="button" class="btn btn-primary" @onclick="AddProduct">新增产品</button>
+
+@code {
+    private string searchTerm = string.Empty;
+    private void OnProductSearch(string searchTerm)
+    {
+        this.searchTerm = searchTerm;
+    }
+
+    private void AddProduct()
+    {
+        NavigationManager.NavigateTo("/addproduct");
+    }
+}
+

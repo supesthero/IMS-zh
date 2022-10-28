@@ -1,0 +1,18 @@
+﻿
+.search-result {
+    overflow-y: auto;
+    max-height: 300px;
+    border: 1px solid silver;
+    padding-top: 5px;
+}
+.selected {
+    background-color: antiquewhite;
+}
+div ul {
+    list-style-type: none;
+    margin-bottom: 5px;
+}
+
+    div ul li {
+        cursor: pointer;
+    }

@@ -1,0 +1,100 @@
+﻿@page "/produce"
+@inject IViewProductsByNameUseCase ViewProductsByNameUseCase
+@inject IViewProductByIdUseCase ViewProductByIdUseCase
+@inject IProduceProductUseCase ProduceProductUseCase
+@inject IJSRuntime JSRuntime
+
+@*@attribute [Authorize(Policy = "Productions")]*@
+
+<h3>生产产品</h3>
+
+<EditForm id="produce-form" Model="produceViewModel" OnValidSubmit="Produce">
+    <DataAnnotationsValidator></DataAnnotationsValidator>
+    <ValidationSummary></ValidationSummary>
+
+    <div class="form-group">
+        <label for="po">生产订单号</label>
+        <InputText id="po" @bind-Value="produceViewModel.ProductionNumber" class="form-control"></InputText>
+    </div>
+    <br />
+    <div class="card">
+        <div class="card-body">
+            <div class="form-group">
+                <input type="hidden" value="@produceViewModel.ProductId" />
+                <AutoCompleteComponent Label="产品=>生产"
+                                       OnItemSelected="OnItemSelected"
+                                       SearchFunction="SearchProduct">
+                </AutoCompleteComponent>
+               
+            </div>
+        </div>
+    </div>
+    <br />
+    <div class="form-group">
+        <label for="qty">数量</label>
+        <InputNumber id="qty" @bind-Value="produceViewModel.QuantityToProduce" class="form-control"></InputNumber>
+    </div>
+
+    <br />
+    <button type="submit" class="btn btn-primary">生产</button>
+</EditForm>
+
+@code {
+    private AuthenticationState authenticationState;
+
+    [CascadingParameter]
+    private Task<AuthenticationState>? authenticationStateTask { get; set; }
+
+    private ProduceViewModel produceViewModel = new ProduceViewModel();
+    private Product? selectedProduct = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (authenticationStateTask != null)
+        {
+            authenticationState = await authenticationStateTask;
+        }
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        base.OnAfterRender(firstRender);
+
+        if (firstRender)
+        {
+            JSRuntime.InvokeVoidAsync("PreventFormSubmition", "produce-form");
+        }
+
+    }
+
+    private async Task<List<ItemViewModel>>? SearchProduct(string name)
+    {
+        var list = await ViewProductsByNameUseCase.ExecuteAsync(name);
+        if (list == null) return null;
+        return list.Select(x => new ItemViewModel { Id = x.ProductId, Name = x.ProductName })?.ToList();
+    }
+
+    private async Task OnItemSelected(ItemViewModel item)
+    {
+        this.selectedProduct = await ViewProductByIdUseCase.ExecuteAsync(item.Id);
+        produceViewModel.ProductId = item.Id;
+        produceViewModel.Product = this.selectedProduct;
+    }
+
+    private async Task Produce()
+    {
+        if (this.selectedProduct != null &&
+            authenticationState != null &&
+            !string.IsNullOrWhiteSpace(authenticationState.User?.Identity?.Name))
+        {
+
+            await ProduceProductUseCase.ExecuteAsync(this.produceViewModel.ProductionNumber,
+                this.selectedProduct,
+                this.produceViewModel.QuantityToProduce,
+                authenticationState.User.Identity.Name);
+
+            produceViewModel = new ProduceViewModel();
+            this.selectedProduct = null;
+        }
+    }
+}

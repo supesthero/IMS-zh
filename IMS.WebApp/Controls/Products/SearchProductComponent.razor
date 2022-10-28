@@ -1,0 +1,23 @@
+﻿
+<div class="input-group">
+    <input type="text"
+           class="form-control"
+           placeholder="输入产品名称查询"
+           @bind-value="productNameToSearch" />
+    <button type="button"
+            class="btn-success input-group-text"
+            @onclick="OnSearch">
+        查询
+    </button>
+</div>
+
+@code {
+    private string productNameToSearch = string.Empty;
+    [Parameter]
+    public EventCallback<string> OnSearchProduct { get; set; }
+
+    private void OnSearch()
+    {
+        OnSearchProduct.InvokeAsync(productNameToSearch); //This passes the data back to the parent component
+    }
+}
